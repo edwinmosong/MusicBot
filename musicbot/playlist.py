@@ -31,7 +31,7 @@ class Playlist(EventEmitter):
     def clear(self):
         self.entries.clear()
 
-    async def add_entry(self, song_url, **meta):
+    async def add_entry(self, song_url, next=False, **meta):
         """
             Validates and adds a song_url to be played. This does not start the download of the song.
 
@@ -81,10 +81,10 @@ class Playlist(EventEmitter):
             self.downloader.ytdl.prepare_filename(info),
             **meta
         )
-        self._add_entry(entry)
-        return entry, len(self.entries)
+        self._add_entry(entry, next=next)
+        return entry, len(self.entries) if not next else 1
 
-    async def import_from(self, playlist_url, **meta):
+    async def import_from(self, playlist_url, next=False, **meta):
         """
             Imports the songs from `playlist_url` and queues them to be played.
 
@@ -93,7 +93,7 @@ class Playlist(EventEmitter):
             :param playlist_url: The playlist url to be cut into individual urls and added to the playlist
             :param meta: Any additional metadata to add to the playlist entry
         """
-        position = len(self.entries) + 1
+        position = len(self.entries) + 1 if not next else 1
         entry_list = []
 
         try:
@@ -123,8 +123,11 @@ class Playlist(EventEmitter):
                         **meta
                     )
 
-                    self._add_entry(entry)
-                    entry_list.append(entry)
+                    self._add_entry(entry, next=next)
+                    if not next:
+                        entry_list.append(entry)
+                    else:
+                        entry_list.insert(0, entry)
                 except:
                     baditems += 1
                     # Once I know more about what's happening here I can add a proper message
@@ -218,8 +221,11 @@ class Playlist(EventEmitter):
 
         return gooditems
 
-    def _add_entry(self, entry):
-        self.entries.append(entry)
+    def _add_entry(self, entry, next=False):
+        if not next:
+            self.entries.append(entry)
+        else:
+            self.entries.appendleft(entry)
         self.emit('entry-added', playlist=self, entry=entry)
 
         if self.peek() is entry:

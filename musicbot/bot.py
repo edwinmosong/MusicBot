@@ -842,7 +842,13 @@ class MusicBot(discord.Client):
         except:
             raise exceptions.CommandError('Invalid URL provided:\n{}\n'.format(server_link), expire_in=30)
 
-    async def cmd_play(self, player, channel, author, permissions, leftover_args, song_url):
+    async def cmd_playnext(self, player, channel, author, permissions, leftover_args, song_url):
+        """
+        Inserts the song to the top of the queue.
+        """
+        return await self.cmd_play(player, channel, author, permissions, leftover_args, song_url, next=True)
+
+    async def cmd_play(self, player, channel, author, permissions, leftover_args, song_url, next=False):
         """
         Usage:
             {command_prefix}play song_link
@@ -958,7 +964,7 @@ class MusicBot(discord.Client):
             # TODO: I can create an event emitter object instead, add event functions, and every play list might be asyncified
             #       Also have a "verify_entry" hook with the entry as an arg and returns the entry if its ok
 
-            entry_list, position = await player.playlist.import_from(song_url, channel=channel, author=author)
+            entry_list, position = await player.playlist.import_from(song_url, channel=channel, author=author, next=next)
 
             tnow = time.time()
             ttime = tnow - t0
@@ -1003,7 +1009,7 @@ class MusicBot(discord.Client):
                 )
 
             try:
-                entry, position = await player.playlist.add_entry(song_url, channel=channel, author=author)
+                entry, position = await player.playlist.add_entry(song_url, channel=channel, author=author, next=next)
 
             except exceptions.WrongEntryTypeError as e:
                 if e.use_url == song_url:
@@ -1013,7 +1019,7 @@ class MusicBot(discord.Client):
                     print("[Info] Assumed url \"%s\" was a single entry, was actually a playlist" % song_url)
                     print("[Info] Using \"%s\" instead" % e.use_url)
 
-                return await self.cmd_play(player, channel, author, permissions, leftover_args, e.use_url)
+                return await self.cmd_play(player, channel, author, permissions, leftover_args, e.use_url, next=next)
 
             reply_text = "Enqueued **%s** to be played. Position in queue: %s"
             btext = entry.title
